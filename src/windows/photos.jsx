@@ -5,7 +5,6 @@ import { gallery } from '../constants';
 import { ExternalLink, Image as ImageIcon, Upload, X } from 'lucide-react';
 
 const Photos = ({ isMaximized }) => {
-  // Initialize with project showcase gallery from constants
   const [photosList, setPhotosList] = useState(
     gallery.map((item) => ({
       id: item.id,
@@ -17,7 +16,6 @@ const Photos = ({ isMaximized }) => {
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  // Handle uploading additional custom screenshots
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     files.forEach((file) => {
@@ -45,8 +43,10 @@ const Photos = ({ isMaximized }) => {
 
   return (
     <div
-      className={`relative flex flex-col bg-white overflow-hidden rounded-xl shadow-2xl border border-gray-300 ${
-        isMaximized ? 'w-full h-full' : 'w-[780px] max-w-[95vw] h-[490px] max-h-[85vh]'
+      className={`relative flex flex-col bg-white overflow-hidden shadow-2xl border border-gray-300 transition-all duration-150 ${
+        isMaximized
+          ? 'w-full h-full rounded-none'
+          : 'w-[780px] max-w-[95vw] h-[520px] max-h-[85vh] rounded-xl'
       }`}
     >
       {/* Window Header */}
@@ -89,7 +89,13 @@ const Photos = ({ isMaximized }) => {
             <p className="text-xs font-medium text-gray-500">No project photos available</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+          <div
+            className={`grid gap-5 ${
+              isMaximized
+                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+                : 'grid-cols-2 sm:grid-cols-3'
+            }`}
+          >
             {photosList.map((photo) => (
               <div
                 key={photo.id}
@@ -106,7 +112,6 @@ const Photos = ({ isMaximized }) => {
                   }}
                 />
 
-                {/* Bottom Overlay Gradient with Title and Visit Badge */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent flex items-end justify-between p-3.5">
                   <p className="text-white text-xs font-semibold drop-shadow truncate pr-2">
                     {photo.title}
@@ -123,7 +128,7 @@ const Photos = ({ isMaximized }) => {
         )}
       </div>
 
-      {/* Lightbox Modal (For uploaded custom images without links) */}
+      {/* Lightbox Modal */}
       {selectedPhoto && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 select-none">
           <button
