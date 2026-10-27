@@ -17,19 +17,24 @@ const WindowWrapper = (Component, windowKey) => {
     const isMaximized = Boolean(windowState?.isMaximized);
     const zIndex = windowState?.zIndex ?? 10;
 
-    // Initialize Draggable once mounted
+    // Draggable setup
     useEffect(() => {
       const el = ref.current;
       if (!el) return;
 
       const handle = el.querySelector('#window-header') || el;
+      const isMobile = window.innerWidth < 640;
 
-      draggableInstance.current = Draggable.create(el, {
-        type: 'x,y',
-        trigger: handle,
-        zIndexBoost: false,
-        onPress: () => focusWindow(windowKey),
-      })[0];
+      if (!isMobile) {
+        draggableInstance.current = Draggable.create(el, {
+          type: 'x,y',
+          trigger: handle,
+          zIndexBoost: false,
+          bounds: 'body',
+          edgeResistance: 0.65,
+          onPress: () => focusWindow(windowKey),
+        })[0];
+      }
 
       return () => {
         if (draggableInstance.current) {
@@ -38,18 +43,25 @@ const WindowWrapper = (Component, windowKey) => {
       };
     }, [windowKey, focusWindow]);
 
-    // Handle Maximized state with Draggable
+    // Handle Maximized State - Fully clear GSAP transforms
     useEffect(() => {
-      if (!draggableInstance.current) return;
+      const el = ref.current;
+      if (!el) return;
+
       if (isMaximized) {
-        draggableInstance.current.disable();
-        gsap.set(ref.current, { clearProps: 'x,y' });
+        if (draggableInstance.current) {
+          draggableInstance.current.disable();
+        }
+        // Wipe away all drag/centering transforms that push the window up
+        gsap.set(el, { x: 0, y: 0, clearProps: 'transform' });
       } else {
-        draggableInstance.current.enable();
+        if (draggableInstance.current) {
+          draggableInstance.current.enable();
+        }
       }
     }, [isMaximized]);
 
-    // GSAP Open, Close, and Minimize transitions
+    // Open / Close / Minimize animation
     useLayoutEffect(() => {
       const el = ref.current;
       if (!el) return;
@@ -59,66 +71,33 @@ const WindowWrapper = (Component, windowKey) => {
       if (!isOpen) {
         gsap.to(el, {
           scale: 0.3,
-          y: 300,
           opacity: 0,
           duration: 0.2,
           ease: 'power2.in',
           pointerEvents: 'none',
-          onComplete: () => {
-            gsap.set(el, { autoAlpha: 0 });
-          },
+          onComplete: () => gsap.set(el, { autoAlpha: 0 }),
         });
         return;
       }
 
       if (isMinimized) {
         gsap.to(el, {
-          scale: 0.3,
-          y: 400,
+          scale: 0.25,
           opacity: 0,
-          duration: 0.22,
+          duration: 0.2,
           ease: 'power2.in',
           pointerEvents: 'none',
-          onComplete: () => {
-            gsap.set(el, { autoAlpha: 0 });
-          },
+          onComplete: () => gsap.set(el, { autoAlpha: 0 }),
         });
       } else {
         gsap.set(el, { autoAlpha: 1 });
         gsap.fromTo(
           el,
-          {
-            scale: 0.8,
-            y: 40,
-            opacity: 0,
-            pointerEvents: 'none',
-          },
-          {
-            scale: 1,
-            y: 0,
-            opacity: 1,
-            duration: 0.28,
-            ease: 'back.out(1.2)',
-            pointerEvents: 'auto',
-          }
+          { scale: 0.85, opacity: 0, pointerEvents: 'none' },
+          { scale: 1, opacity: 1, duration: 0.25, ease: 'back.out(1.15)', pointerEvents: 'auto' }
         );
       }
     }, [isOpen, isMinimized]);
-
-    const maximizeStyles = isMaximized
-      ? {
-          position: 'fixed',
-          top: '32px',
-          left: 0,
-          width: '100vw',
-          height: 'calc(100vh - 32px)',
-          maxWidth: '100vw',
-          maxHeight: 'calc(100vh - 32px)',
-          borderRadius: 0,
-          zIndex: 99999,
-          transform: 'none',
-        }
-      : {};
 
     return (
       <section
@@ -128,14 +107,14 @@ const WindowWrapper = (Component, windowKey) => {
           zIndex,
           visibility: isOpen && !isMinimized ? 'visible' : 'hidden',
           opacity: isOpen && !isMinimized ? 1 : 0,
-          ...maximizeStyles,
         }}
-        className={`fixed top-1/2 left-1/2 origin-center will-change-transform transform-gpu select-none ${
+        className={`fixed will-change-transform select-none ${
           isMaximized
-            ? '!top-8 !left-0 !w-screen !h-[calc(100vh-2rem)]'
-            : '-translate-x-1/2 -translate-y-1/2'
+            ? '!top-8 !left-0 !w-screen !h-[calc(100vh-2rem)] !transform-none !m-0 !p-0'
+            : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[96vw]'
         }`}
         onMouseDown={() => focusWindow(windowKey)}
+        onTouchStart={() => focusWindow(windowKey)}
       >
         <Component {...props} isMaximized={isMaximized} />
       </section>
